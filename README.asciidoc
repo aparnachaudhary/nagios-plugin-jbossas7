@@ -1,0 +1,16 @@
+== Nagios Plugin JBossAS7 ==
+
+This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The plugin uses HTTP-JSON based API (JBossAS REST Management API) to collect server statistics.
+
+=== Requirements: ===
+* Nagios
+* Python
+
+
+=== How it works: ===
+
+TODO
+
+=== Licensing and Copyright: ===
+
+The project is licensed under the http://www.apache.org/licenses/LICENSE-2.0[Apache License, Version 2.0]
