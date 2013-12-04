@@ -6,10 +6,32 @@ This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The
 * Nagios
 * Python
 
+=== Installation: ===
+
+=== Usage: ===
+
+==== General: ====
+
+===== Check Server State =====
+
+==== [Purple]#JVM# ====
+
+===== Check Heap Memory Usage =====
+
+===== Check Non Heap Usage =====
+
+===== Check GC Time =====
+
+
+==== DataSource ====
+
+===== Check Datasource Connection Count =====
+
+==== Messaging ====
+
+===== Check JMS Message Count =====
 
 === How it works: ===
-
-TODO
 
 === Licensing and Copyright: ===
 
