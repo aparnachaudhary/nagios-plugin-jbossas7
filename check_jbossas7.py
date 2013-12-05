@@ -114,9 +114,10 @@ def check_levels(param, warning, critical, message, ok=[]):
 #
 # TODO: Document
 #
-def get_digest_auth_json(uri, user, password, payload):
+def get_digest_auth_json(host, port, uri, user, password, payload):
     try:
-        res = requests.get(uri, params=payload, auth=HTTPDigestAuth(user, password))
+        url = base_url(host, port) + uri
+        res = requests.get(url, params=payload, auth=HTTPDigestAuth(user, password))
         return res.json()
     except Exception, e:
         # The server could be down; make this CRITICAL.
@@ -125,15 +126,22 @@ def get_digest_auth_json(uri, user, password, payload):
 #
 # TODO: Document
 #
-def post_digest_auth_json(uri, user, password, payload):
+def post_digest_auth_json(host, port, uri, user, password, payload):
     try:
+        url = base_url(host, port) + uri
         headers = {'content-type': 'application/json'}        
-        res = requests.post(uri, data=json.dumps(payload), headers=headers, auth=HTTPDigestAuth(user, password))
+        res = requests.post(url, data=json.dumps(payload), headers=headers, auth=HTTPDigestAuth(user, password))
         return res.json()
     except Exception, e:
         # The server could be down; make this CRITICAL.
         return exit_with_general_critical(e)
 
+#
+# TODO: Document
+#
+def base_url(host, port):
+    url = "http://{host}:{port}/management".format(host=host,port=port)
+    return url
 #
 # TODO: Document
 #
@@ -147,9 +155,9 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status','heap_usage'])
+                 choices=['server_status','heap_usage', 'non_heap_usage'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
-    p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|commited] from heap_usage')
+    p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|committed] from heap_usage')
 
     options, arguments = p.parse_args()
     host = options.host
@@ -166,17 +174,17 @@ def main(argv):
 
     action = options.action
     perf_data = options.perf_data
-    
     #
     # moving the login up here and passing in the connection
     #
     start = time.time()
-    #check_server_status('127.0.0.1', '10990', 'admin', 'password123', warning, critical, perf_data)
 
     if action == "server_status":
         return check_server_status(host, port, user, passwd, warning, critical, perf_data)
     elif action == "heap_usage":
-        return check_heap_usage(host, port, user, passwd, warning, critical, perf_data)
+        return check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
+    elif action == "non_heap_usage":
+        return check_non_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
     else:
         return check_connect(host, port, warning, critical, perf_data, user, passwd, conn_time)
 
@@ -198,28 +206,31 @@ def exit_with_general_critical(e):
 
 
 def check_server_status(host, port, user, passwd, warning, critical, perf_data):
-    warning = warning or 3
-    critical = critical or 6
-    payload = {'operation': 'read-attribute', 'name': 'server-state'}
-    url = "http://{host}:{port}/management".format(host=host,port=port)
-    res = post_digest_auth_json(url,user, passwd, payload)
-    print res
+    warning = warning or ""
+    critical = critical or ""
+    ok = "running"
     
-    message = "Server Status %s" % res
+    payload = {'operation': 'read-attribute', 'name': 'server-state'}
+    url = base_url(host, port)
+    res = post_digest_auth_json(host, port, url,user, passwd, payload)
+    res = res['result']
+    
+    message = "Server Status '%s'" % res
     message += performance_data(perf_data, [(res, "server_status", warning, critical)])
 
-    return check_levels(res, warning, critical, message)
+    return check_levels(res, warning, critical, message, ok)
 
 def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
-    if memory_value not in ['max', 'init', 'used', 'commited']:
+    if memory_value not in ['max', 'init', 'used', 'committed']:
         return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
         
     warning = warning or 512
     critical = critical or 1024
+    
     payload = {'include-runtime': 'true'}
-    url = "http://{host}:{port}/management".format(host=host,port=port)
-    url =  url + "/core-service/platform-mbean/type/memory"
-    res = get_digest_auth_json(url,user, passwd, payload)
+    url = "/core-service/platform-mbean/type/memory"
+    
+    res = get_digest_auth_json(host, port, url,user, passwd, payload)
     res = res['heap-memory-usage'][memory_value] / (1024*1024)
     
     message = "Heap Memory '%s' %s MiB" % (memory_value, res)
@@ -227,6 +238,23 @@ def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, 
 
     return check_levels(res, warning, critical, message)
 
+def check_non_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
+    if memory_value not in ['max', 'init', 'used', 'committed']:
+        return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
+        
+    warning = warning or 128
+    critical = critical or 256
+    
+    payload = {'include-runtime': 'true'}
+    url = "/core-service/platform-mbean/type/memory"
+    
+    res = get_digest_auth_json(host, port, url,user, passwd, payload)
+    res = res['non-heap-memory-usage'][memory_value] / (1024*1024)
+    
+    message = "Non Heap Memory '%s' %s MiB" % (memory_value, res)
+    message += performance_data(perf_data, [(res, "non_heap_usage", warning, critical)])
+
+    return check_levels(res, warning, critical, message)
 
 def build_file_name(host, action):
     #done this way so it will work when run independently and from shell
