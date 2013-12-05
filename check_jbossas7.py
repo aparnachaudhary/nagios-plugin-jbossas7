@@ -128,7 +128,7 @@ def get_digest_auth_json(uri, user, password, payload):
 def post_digest_auth_json(uri, user, password, payload):
     try:
         headers = {'content-type': 'application/json'}        
-        res = requests.post(uri, data=payload, headers=headers, auth=HTTPDigestAuth(user, password))
+        res = requests.post(uri, data=json.dumps(payload), headers=headers, auth=HTTPDigestAuth(user, password))
         return res.json()
     except Exception, e:
         # The server could be down; make this CRITICAL.
@@ -147,14 +147,16 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status'])
+                 choices=['server_status','heap_usage'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
+    p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|commited] from heap_usage')
 
     options, arguments = p.parse_args()
     host = options.host
     port = options.port
     user = options.user
     passwd = options.passwd
+    memory_value = options.memory_value
     if (options.action == 'server_status'):
         warning = str(options.warning or "")
         critical = str(options.critical or "")
@@ -173,6 +175,8 @@ def main(argv):
 
     if action == "server_status":
         return check_server_status(host, port, user, passwd, warning, critical, perf_data)
+    elif action == "heap_usage":
+        return check_heap_usage(host, port, user, passwd, warning, critical, perf_data)
     else:
         return check_connect(host, port, warning, critical, perf_data, user, passwd, conn_time)
 
@@ -198,11 +202,28 @@ def check_server_status(host, port, user, passwd, warning, critical, perf_data):
     critical = critical or 6
     payload = {'operation': 'read-attribute', 'name': 'server-state'}
     url = "http://{host}:{port}/management".format(host=host,port=port)
-    res = post_digest_auth_json(url,user, passwd, json.dumps(payload))
+    res = post_digest_auth_json(url,user, passwd, payload)
     print res
     
     message = "Server Status %s" % res
-    message += performance_data(perf_data, [(res, "connection_time", warning, critical)])
+    message += performance_data(perf_data, [(res, "server_status", warning, critical)])
+
+    return check_levels(res, warning, critical, message)
+
+def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
+    if memory_value not in ['max', 'init', 'used', 'commited']:
+        return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
+        
+    warning = warning or 512
+    critical = critical or 1024
+    payload = {'include-runtime': 'true'}
+    url = "http://{host}:{port}/management".format(host=host,port=port)
+    url =  url + "/core-service/platform-mbean/type/memory"
+    res = get_digest_auth_json(url,user, passwd, payload)
+    res = res['heap-memory-usage'][memory_value] / (1024*1024)
+    
+    message = "Heap Memory '%s' %s MiB" % (memory_value, res)
+    message += performance_data(perf_data, [(res, "heap_usage", warning, critical)])
 
     return check_levels(res, warning, critical, message)
 
