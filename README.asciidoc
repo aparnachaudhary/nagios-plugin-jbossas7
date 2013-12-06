@@ -15,6 +15,15 @@ Edit your commands.cfg and add the following
     command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -W $ARG5$ -C $ARG6$
  }
  
+ define command {
+    command_name    check_jboss_memory
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -m $ARG5$ -W $ARG6$ -C $ARG7$
+ }
+
+ define command {
+    command_name    check_jboss_gc
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -g $ARG5$ -W $ARG6$ -C $ARG7$
+ }
  
 (add -D to the command if you want to add perfdata to the output)
 Then you can reference it like the following.
@@ -27,19 +36,41 @@ Then you can reference it like the following.
 
  
  define service {
-    use                 generic-service
+    use                     generic-service
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Connectivity Check
     check_command           check_jboss!server_status!9990!admin!password123!!
  }
 
-==== [Purple]#JVM# ====
+==== JVM Monitoring ====
+
 
 ===== Check Heap Memory Usage =====
 
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Heap Memory Usage Check
+    check_command           check_jboss_memory!heap_usage!9990!admin!password123!memory_type!512!1024
+ }
+
 ===== Check Non Heap Usage =====
 
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Non-Heap Memory Usage Check
+    check_command           check_jboss_memory!non_heap_usage!9990!admin!password123!memory_type!128!256
+ }
+
 ===== Check GC Time =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server GC time Check
+    check_command           check_jboss_gc!gctime!9990!admin!password123!gc_type!0.5!1.0
+ }
 
 
 ==== DataSource ====
