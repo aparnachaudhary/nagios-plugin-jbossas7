@@ -156,10 +156,11 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime'])
+                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
     p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|committed] from heap_usage and non_heap_usage')
-    p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime')
+    p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
+    p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
 
     options, arguments = p.parse_args()
     host = options.host
@@ -168,6 +169,7 @@ def main(argv):
     passwd = options.passwd
     memory_value = options.memory_value
     gc_type = options.gc_type
+    queue_name = options.queue_name
     if (options.action == 'server_status'):
         warning = str(options.warning or "")
         critical = str(options.critical or "")
@@ -184,8 +186,10 @@ def main(argv):
 
     if action == "server_status":
         return check_server_status(host, port, user, passwd, warning, critical, perf_data)
-    elif action == "gctime":
-        return check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data)
+    elif action == "gctime_percent":
+        return check_gctime_percent(host, port, user, passwd, gc_type, warning, critical, perf_data)
+    elif action == "queue_depth":
+        return check_queue_depth(host, port, user, passwd, queue_name, warning, critical, perf_data)
     elif action == "heap_usage":
         return check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
     elif action == "non_heap_usage":
@@ -215,75 +219,109 @@ def check_server_status(host, port, user, passwd, warning, critical, perf_data):
     critical = critical or ""
     ok = "running"
     
-    payload = {'operation': 'read-attribute', 'name': 'server-state'}
-    url = base_url(host, port)
-    res = post_digest_auth_json(host, port, url,user, passwd, payload)
-    res = res['result']
+    try:
+        payload = {'operation': 'read-attribute', 'name': 'server-state'}
+        url = base_url(host, port)
+        res = post_digest_auth_json(host, port, url,user, passwd, payload)
+        res = res['result']
+        
+        message = "Server Status '%s'" % res
+        message += performance_data(perf_data, [(res, "server_status", warning, critical)])
     
-    message = "Server Status '%s'" % res
-    message += performance_data(perf_data, [(res, "server_status", warning, critical)])
+        return check_levels(res, warning, critical, message, ok)
+    except Exception, e:
+        return exit_with_general_critical(e)
 
-    return check_levels(res, warning, critical, message, ok)
 
 def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
-    if memory_value not in ['max', 'init', 'used', 'committed']:
-        return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
-        
     warning = warning or 512
     critical = critical or 1024
     
-    payload = {'include-runtime': 'true'}
-    url = "/core-service/platform-mbean/type/memory"
+    try:
+        if memory_value not in ['max', 'init', 'used', 'committed']:
+            return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
+        
+        payload = {'include-runtime': 'true'}
+        url = "/core-service/platform-mbean/type/memory"
+        
+        res = get_digest_auth_json(host, port, url,user, passwd, payload)
+        res = res['heap-memory-usage'][memory_value] / (1024*1024)
+        
+        message = "Heap Memory '%s' %s MiB" % (memory_value, res)
+        message += performance_data(perf_data, [(res, "heap_usage", warning, critical)])
     
-    res = get_digest_auth_json(host, port, url,user, passwd, payload)
-    res = res['heap-memory-usage'][memory_value] / (1024*1024)
-    
-    message = "Heap Memory '%s' %s MiB" % (memory_value, res)
-    message += performance_data(perf_data, [(res, "heap_usage", warning, critical)])
-
-    return check_levels(res, warning, critical, message)
+        return check_levels(res, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
 
 def check_non_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
-    if memory_value not in ['max', 'init', 'used', 'committed']:
-        return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
-        
     warning = warning or 128
     critical = critical or 256
     
-    payload = {'include-runtime': 'true'}
-    url = "/core-service/platform-mbean/type/memory"
-    
-    res = get_digest_auth_json(host, port, url,user, passwd, payload)
-    res = res['non-heap-memory-usage'][memory_value] / (1024*1024)
-    
-    message = "Non Heap Memory '%s' %s MiB" % (memory_value, res)
-    message += performance_data(perf_data, [(res, "non_heap_usage", warning, critical)])
-
-    return check_levels(res, warning, critical, message)
-
-def check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data):
-    if gc_type not in ['PS_MarkSweep', 'PS_Scavenge']:
-        return exit_with_general_critical("The GC type of '%s' is not valid" % gc_type)
+    try:
+        if memory_value not in ['max', 'init', 'used', 'committed']:
+            return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
+            
+        payload = {'include-runtime': 'true'}
+        url = "/core-service/platform-mbean/type/memory"
         
+        res = get_digest_auth_json(host, port, url,user, passwd, payload)
+        res = res['non-heap-memory-usage'][memory_value] / (1024*1024)
+        
+        message = "Non Heap Memory '%s' %s MiB" % (memory_value, res)
+        message += performance_data(perf_data, [(res, "non_heap_usage", warning, critical)])
+    
+        return check_levels(res, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
+
+def check_gctime_percent(host, port, user, passwd, gc_type, warning, critical, perf_data):
     # Make sure you configure right values for your application    
     warning = warning or 0.5
     critical = critical or 1.0
     
-    url = "/core-service/platform-mbean/type/runtime"
-    res = get_digest_auth_json(host, port, url,user, passwd, None)
-    uptime = res['uptime']
+    try:
+        if gc_type not in ['PS_MarkSweep', 'PS_Scavenge']:
+            return exit_with_general_critical("The GC type of '%s' is not valid" % gc_type)
+            
+        url = "/core-service/platform-mbean/type/runtime"
+        res = get_digest_auth_json(host, port, url,user, passwd, None)
+        uptime = res['uptime']
+        
+        payload = {'include-runtime': 'true', 'recursive':'true'}
+        url = "/core-service/platform-mbean/type/garbage-collector"
+        res = get_digest_auth_json(host, port, url,user, passwd, payload)
+        gctime = res['name'][gc_type]['collection-time']
+        
+        percent = float(gctime*100)/uptime
+        
+        message = "GC percentage for '%s'  %s " %(gc_type, percent)
+        message += performance_data(perf_data, [(percent, "gctime_percent", warning, critical)])
     
-    payload = {'include-runtime': 'true', 'recursive':'true'}
-    url = "/core-service/platform-mbean/type/garbage-collector"
-    res = get_digest_auth_json(host, port, url,user, passwd, payload)
-    gctime = res['name'][gc_type]['collection-time']
-    
-    percent = float(gctime*100)/uptime
-    
-    message = "GC percentage for '%s'  %s " %(gc_type, percent)
-    message += performance_data(perf_data, [(percent, "gctime", warning, critical)])
+        return check_levels(percent, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
 
-    return check_levels(percent, warning, critical, message)
+def check_queue_depth(host, port, user, passwd, queue_name, warning, critical, perf_data):
+    warning = warning or 100
+    critical = critical or 200
+    
+    try:    
+        if queue_name is None:
+            return exit_with_general_critical("The queue name '%s' is not valid" % queue_name)
+            
+        payload = {'include-runtime': 'true', 'recursive':'true'}
+        url = "/subsystem/messaging/hornetq-server/default"
+        
+        res = get_digest_auth_json(host, port, url,user, passwd, payload)
+        res = res['jms-queue'][queue_name]['delivering-count']
+        
+        message = "Queue Depth %s" % res
+        message += performance_data(perf_data, [(res, "queue_depth", warning, critical)])
+    
+        return check_levels(res, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
 
 def build_file_name(host, action):
     #done this way so it will work when run independently and from shell
