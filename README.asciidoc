@@ -2,9 +2,13 @@
 
 This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The plugin uses HTTP-JSON based API (JBossAS REST Management API) to collect server statistics.
 
+=== How it works: ===
+
+
 === Requirements: ===
 * Nagios
 * Python
+* JBossAS 7.1.1-Final
 
 === Installation: ===
 
@@ -25,6 +29,11 @@ Edit your commands.cfg and add the following
     command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -g $ARG5$ -W $ARG6$ -C $ARG7$
  }
  
+ define command {
+    command_name    check_jboss_messaging
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -q $ARG5$ -W $ARG6$ -C $ARG7$
+ }
+  
 (add -D to the command if you want to add perfdata to the output)
 Then you can reference it like the following.
 
@@ -33,7 +42,6 @@ Then you can reference it like the following.
 ==== General: ====
 
 ===== Check Server State =====
-
  
  define service {
     use                     generic-service
@@ -68,8 +76,8 @@ Then you can reference it like the following.
  define service {
     use                     generic-service
     hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server GC time Check
-    check_command           check_jboss_gc!gctime!9990!admin!password123!gc_type!0.5!1.0
+    service_description     JBossAS Server Percent GC time Check
+    check_command           check_jboss_gc!gctime_percent!9990!admin!password123!gc_type!0.5!1.0
  }
 
 
@@ -79,9 +87,14 @@ Then you can reference it like the following.
 
 ==== Messaging ====
 
-===== Check JMS Message Count =====
+===== Check JMS Queue Depth =====
 
-=== How it works: ===
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Message queue depth
+    check_command           check_jboss_messaging!queue_depth!9990!admin!password123!gc_type
+ }
 
 === Licensing and Copyright: ===
 
