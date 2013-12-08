@@ -182,7 +182,7 @@ The average time spent blocking for a connection.
     use                     generic-service
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Message queue depth
-    check_command           check_jboss_messaging!queue_depth!9990!admin!password123!gc_type
+    check_command           check_jboss_messaging!queue_depth!9990!admin!password123!queue_name
  }
 
 === Licensing and Copyright: ===
