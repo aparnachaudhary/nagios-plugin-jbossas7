@@ -119,7 +119,16 @@ def get_digest_auth_json(host, port, uri, user, password, payload):
     try:
         url = base_url(host, port) + uri
         res = requests.get(url, params=payload, auth=HTTPDigestAuth(user, password))
-        return res.json()
+        data = res.json()
+        
+        try:    
+            outcome = data['outcome']
+            if outcome == "failed":
+                print "CRITICAL - Unexpected value : %s" % data
+                sys.exit(2)
+        except KeyError: pass
+
+        return data
     except Exception, e:
         # The server could be down; make this CRITICAL.
         return exit_with_general_critical(e)
@@ -132,7 +141,16 @@ def post_digest_auth_json(host, port, uri, user, password, payload):
         url = base_url(host, port) + uri
         headers = {'content-type': 'application/json'}        
         res = requests.post(url, data=json.dumps(payload), headers=headers, auth=HTTPDigestAuth(user, password))
-        return res.json()
+        data = res.json()
+        
+        try:    
+            outcome = data['outcome']
+            if outcome == "failed":
+                print "CRITICAL - Unexpected value : %s" % data
+                sys.exit(2)
+        except KeyError: pass
+
+        return data
     except Exception, e:
         # The server could be down; make this CRITICAL.
         return exit_with_general_critical(e)
@@ -147,6 +165,10 @@ def base_url(host, port):
 # TODO: Document
 #
 def main(argv):
+    
+    global ds_stat_types
+    ds_stat_types = ['ActiveCount', 'AvailableCount', 'AverageBlockingTime', 'AverageCreationTime', 'CreatedCount', 'DestroyedCount', 'MaxCreationTime', 'MaxUsedCount', 'MaxWaitTime', 'TimedOut', 'TotalBlockingTime', 'TotalCreationTime']
+    
     p = optparse.OptionParser(conflict_handler="resolve", description="This Nagios plugin checks the health of JBossAS.")
 
     p.add_option('-H', '--host', action='store', type='string', dest='host', default='127.0.0.1', help='The hostname you want to connect to')
@@ -156,11 +178,13 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth'])
+                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
     p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|committed] from heap_usage and non_heap_usage')
     p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
     p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
+    p.add_option('-d', '--datasource', action='store', dest='datasource_name', default=None, help='The datasource name for which you want to retrieve statistics')
+    p.add_option('-s', '--poolstats', action='store', dest='ds_stat_type', default=None, help='The datasource pool statistics type')
 
     options, arguments = p.parse_args()
     host = options.host
@@ -170,6 +194,9 @@ def main(argv):
     memory_value = options.memory_value
     gc_type = options.gc_type
     queue_name = options.queue_name
+    datasource_name = options.datasource_name
+    ds_stat_type = options.ds_stat_type
+    
     if (options.action == 'server_status'):
         warning = str(options.warning or "")
         critical = str(options.critical or "")
@@ -194,6 +221,10 @@ def main(argv):
         return check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
     elif action == "non_heap_usage":
         return check_non_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
+    elif action == "datasource":
+        return check_non_xa_datasource(host, port, user, passwd, datasource_name, ds_stat_type, warning, critical, perf_data)
+    elif action == "xa_datasource":
+        return check_xa_datasource(host, port, user, passwd, datasource_name, ds_stat_type, warning, critical, perf_data)
     else:
         return check_connect(host, port, warning, critical, perf_data, user, passwd, conn_time)
 
@@ -311,15 +342,62 @@ def check_queue_depth(host, port, user, passwd, queue_name, warning, critical, p
             return exit_with_general_critical("The queue name '%s' is not valid" % queue_name)
             
         payload = {'include-runtime': 'true', 'recursive':'true'}
-        url = "/subsystem/messaging/hornetq-server/default"
+        url = "/subsystem/messaging/hornetq-server/default/jms-queue/"+queue_name
         
         res = get_digest_auth_json(host, port, url,user, passwd, payload)
-        res = res['jms-queue'][queue_name]['delivering-count']
+        res = res['delivering-count']
         
         message = "Queue Depth %s" % res
         message += performance_data(perf_data, [(res, "queue_depth", warning, critical)])
     
         return check_levels(res, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
+
+def get_datasource_stats(host, port, user, passwd, is_xa, ds_name, ds_stat_type):
+    try:    
+        if ds_name is None:
+            return exit_with_general_critical("The ds_name name '%s' is not valid" % ds_name)
+        if ds_stat_type not in ds_stat_types:
+            return exit_with_general_critical("The datasource statistics type of '%s' is not valid" % ds_stat_type)
+            
+        payload = {'include-runtime': 'true', 'recursive':'true'}
+        if is_xa:
+            url = "/subsystem/datasources/xa-data-source/"+ds_name+"/statistics/pool/"
+        else:
+            url = "/subsystem/datasources/data-source/"+ds_name+"/statistics/pool/"
+        
+        data = get_digest_auth_json(host, port, url,user, passwd, payload)
+        data = data[ds_stat_type]
+        
+        return data
+    except Exception, e:
+        return exit_with_general_critical(e)
+
+
+def check_non_xa_datasource(host, port, user, passwd, ds_name, ds_stat_type, warning, critical, perf_data):
+    warning = warning or 0
+    critical = critical or 10
+    
+    try:    
+        data = get_datasource_stats(host, port, user, passwd, False, ds_name, ds_stat_type)
+        
+        message = "DataSource %s %s" %(ds_stat_type,data)
+        message += performance_data(perf_data, [(data, "datasource", warning, critical)])
+        return check_levels(data, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
+
+def check_xa_datasource(host, port, user, passwd, ds_name, ds_stat_type, warning, critical, perf_data):
+    warning = warning or 0
+    critical = critical or 10
+    
+    try:    
+        data = get_datasource_stats(host, port, user, passwd, True, ds_name, ds_stat_type)
+
+        message = "DataSource %s %s" %(ds_stat_type,data)
+        message += performance_data(perf_data, [(data, "xa_datasource", warning, critical)])
+        return check_levels(data, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
