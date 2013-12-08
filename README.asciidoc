@@ -33,7 +33,12 @@ Edit your commands.cfg and add the following
     command_name    check_jboss_messaging
     command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -q $ARG5$ -W $ARG6$ -C $ARG7$
  }
-  
+
+ define command {
+    command_name    check_jboss_datasource
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -d $ARG5$ -s $ARG6$ -W $ARG7$ -C $ARG8$
+ }
+ 
 (add -D to the command if you want to add perfdata to the output)
 Then you can reference it like the following.
 
@@ -83,7 +88,91 @@ Then you can reference it like the following.
 
 ==== DataSource ====
 
-===== Check Datasource Connection Count =====
+Following statistics are supported:
+
+.Table Datasource Monitoring Metrics
+[cols="3*", options="header"]
+|===
+|Metric Type |Description |Unit
+
+|ActiveCount
+|The active count
+|-
+
+|AvailableCount
+|-
+|-
+
+|AverageBlockingTime
+|The average time spent blocking for a connection
+|-
+
+|AverageCreationTime
+|-
+|-
+
+|CreatedCount
+|-
+|-
+
+|DestroyedCount
+|-
+|-
+
+|MaxCreationTime
+|-
+|-
+
+|MaxUsedCount
+|-
+|-
+
+|MaxWaitTime
+|-
+|-
+
+|TimedOut
+|-
+|-
+
+|TotalBlockingTime
+|-
+|-
+
+|TotalCreationTime
+|-
+|-
+
+|===
+
+===== Check Non-XA Datasource Active Connection Count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource active connection count
+    check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!ActiveCount
+ }
+
+===== Check Non-XA Datasource Average Blocking time =====
+
+The average time spent blocking for a connection.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource average blocking time
+    check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!AverageBlockingTime
+ }
+
+===== Check XA Datasource Active Connection Count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource active connection count
+    check_command           check_jboss_datasource!xa_datasource!9990!admin!password123!ds_name!ActiveCount
+ }
 
 ==== Messaging ====
 
