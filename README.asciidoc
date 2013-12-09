@@ -76,6 +76,10 @@ Then you can reference it like the following.
     check_command           check_jboss_memory!non_heap_usage!9990!admin!password123!memory_type!128!256
  }
 
+===== Check Perm Gen Usage =====
+
+===== Check Code Cache Usage =====
+
 ===== Check GC Time =====
 
  define service {
@@ -84,6 +88,11 @@ Then you can reference it like the following.
     service_description     JBossAS Server Percent GC time Check
     check_command           check_jboss_gc!gctime_percent!9990!admin!password123!gc_type!0.5!1.0
  }
+
+
+==== Threading ====
+
+===== Check total started thread count =====
 
 
 ==== DataSource ====
