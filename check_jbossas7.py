@@ -17,14 +17,11 @@
 import sys
 import time
 import optparse
-import textwrap
 import re
 import os
-import socket
-import urllib2
 import requests
 from requests.auth import HTTPDigestAuth
-from datetime import timedelta
+#from datetime import timedelta
 
 try:
     import json
@@ -156,7 +153,7 @@ def post_digest_auth_json(host, port, uri, user, password, payload):
         return exit_with_general_critical(e)
 
 #
-# TODO: Document
+# Provides base URL for HTTP Management API
 #
 def base_url(host, port):
     url = "http://{host}:{port}/management".format(host=host,port=port)
@@ -178,13 +175,14 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource'])
+                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource', 'threading'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
     p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|committed] from heap_usage and non_heap_usage')
     p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
     p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
     p.add_option('-d', '--datasource', action='store', dest='datasource_name', default=None, help='The datasource name for which you want to retrieve statistics')
     p.add_option('-s', '--poolstats', action='store', dest='ds_stat_type', default=None, help='The datasource pool statistics type')
+    p.add_option('-t', '--threadstats', action='store', dest='thread_stat_type', default=None, help='The threading statistics type')
 
     options, arguments = p.parse_args()
     host = options.host
@@ -196,6 +194,7 @@ def main(argv):
     queue_name = options.queue_name
     datasource_name = options.datasource_name
     ds_stat_type = options.ds_stat_type
+    thread_stat_type = options.thread_stat_type
     
     if (options.action == 'server_status'):
         warning = str(options.warning or "")
@@ -206,10 +205,6 @@ def main(argv):
 
     action = options.action
     perf_data = options.perf_data
-    #
-    # moving the login up here and passing in the connection
-    #
-    start = time.time()
 
     if action == "server_status":
         return check_server_status(host, port, user, passwd, warning, critical, perf_data)
@@ -225,8 +220,10 @@ def main(argv):
         return check_non_xa_datasource(host, port, user, passwd, datasource_name, ds_stat_type, warning, critical, perf_data)
     elif action == "xa_datasource":
         return check_xa_datasource(host, port, user, passwd, datasource_name, ds_stat_type, warning, critical, perf_data)
+    elif action == "threading":
+        return check_threading(host, port, user, passwd, thread_stat_type, warning, critical, perf_data)
     else:
-        return check_connect(host, port, warning, critical, perf_data, user, passwd, conn_time)
+        return 2
 
 
 def exit_with_general_warning(e):
@@ -246,14 +243,13 @@ def exit_with_general_critical(e):
 
 
 def check_server_status(host, port, user, passwd, warning, critical, perf_data):
-    warning = warning or ""
+    warning = warning or "reload-required"
     critical = critical or ""
     ok = "running"
     
     try:
         payload = {'operation': 'read-attribute', 'name': 'server-state'}
-        url = base_url(host, port)
-        res = post_digest_auth_json(host, port, url,user, passwd, payload)
+        res = post_digest_auth_json(host, port, "", user, passwd, payload)
         res = res['result']
         
         message = "Server Status '%s'" % res
@@ -332,6 +328,28 @@ def check_gctime_percent(host, port, user, passwd, gc_type, warning, critical, p
         return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
+
+def check_threading(host, port, user, passwd, thread_stat_type, warning, critical, perf_data):
+    warning = warning or 100
+    critical = critical or 200
+    
+    try:
+        if thread_stat_type not in ['thread-count', 'peak-thread-count', 'total-started-thread-count', 'daemon-thread-count']:
+            return exit_with_general_critical("The thread statistics value type of '%s' is not valid" % thread_stat_type)
+            
+        payload = {'include-runtime': 'true'}
+        url = "/core-service/platform-mbean/type/threading"
+        
+        data = get_digest_auth_json(host, port, url,user, passwd, payload)
+        data = data[thread_stat_type]
+        
+        message = "Threading Statistics '%s':%s " % (thread_stat_type, data)
+        message += performance_data(perf_data, [(data, "threading", warning, critical)])
+    
+        return check_levels(data, warning, critical, message)
+    except Exception, e:
+        return exit_with_general_critical(e)
+
 
 def check_queue_depth(host, port, user, passwd, queue_name, warning, critical, perf_data):
     warning = warning or 100
