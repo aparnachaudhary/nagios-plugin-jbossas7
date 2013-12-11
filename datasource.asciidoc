@@ -1,3 +1,15 @@
+=== Datasource Check Configuration ===
+
+Edit your commands.cfg and add the following
+
+ define command {
+    command_name    check_jboss_datasource
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -d $ARG5$ -s $ARG6$ -W $ARG7$ -C $ARG8$
+ }
+
+(add -D to the command if you want to add perfdata to the output)
+Then you can reference it like the following.
+
 ===== Check Non-XA Datasource Active Connection Count =====
 
  define service {
@@ -5,6 +17,15 @@
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Datasource active connection count
     check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!ActiveCount
+ }
+
+If you want to override the default watermarks for WARNING and CRITICAL; configure as follows; where 10 is value for warning watermark while 20 is for critical watermark.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource active connection count
+    check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!ActiveCount!10!20
  }
 
 ===== Check Non-XA Datasource Average Blocking time =====
