@@ -2,8 +2,15 @@
 
 This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The plugin uses HTTP-JSON based API (JBossAS REST Management API) to collect server statistics.
 
-=== How it works: ===
+Supports monitoring of KPI for:
 
+* link:#runtime[Server Status]
+* link:#memory[Heap/Non-Heap Memory Usage]
+* link:#garbage-collection[Garbage Collection]
+* link:#messaging[HornetQ Messaging]
+* link:#datasource[DataSource]
+* link:#threading[Threading]
+* link:#web[Web]
 
 === Requirements: ===
 * Nagios
@@ -49,7 +56,7 @@ Then you can reference it like the following.
 
 === Usage: ===
 
-==== General: ====
+==== Runtime ====
 
 ===== Check Server State =====
  
@@ -60,7 +67,7 @@ Then you can reference it like the following.
     check_command           check_jboss!server_status!9990!admin!password123!!
  }
 
-==== JVM Monitoring ====
+==== Memory ====
 
 
 ===== Check Heap Memory Usage =====
@@ -84,6 +91,8 @@ Then you can reference it like the following.
 ===== Check Perm Gen Usage =====
 
 ===== Check Code Cache Usage =====
+
+==== Garbage Collection ====
 
 ===== Check GC Time =====
 
@@ -127,7 +136,8 @@ Then you can reference it like the following.
 
 ==== link:datasource.asciidoc[DataSource] ====
 
-This section provides details about the link:datasource.asciidoc[supported checks] for collecting datasource statistics.
+This section provides example configuration for collecting datasource statistics. 
+In addition to these, more metrics are supported for datasource monitoring. Detailed documentation is available link:datasource.asciidoc[here].
 
 ===== Check Non-XA Datasource Active Connection Count =====
 
