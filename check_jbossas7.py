@@ -68,19 +68,28 @@ def performance_data(perf_data, params):
     return data
 
 
-#
-# TODO: Document
-#
 def numeric_type(param):
+    """
+    Checks parameter type
+    True for float; int or null data; false otherwise
+    
+    :param param: input param to check
+    """
     if ((type(param) == float or type(param) == int or param == None)):
         return True
     return False
 
 
-#
-# TODO: Document
-#
 def check_levels(param, warning, critical, message, ok=[]):
+    """
+    Checks error level
+    
+    :param param: input param
+    :param warning: watermark for warning
+    :param critical: watermark for critical
+    :param message: message to be reported to nagios
+    :param ok: watermark for ok level
+    """
     if (numeric_type(critical) and numeric_type(warning)):
         if param >= critical:
             print "CRITICAL - " + message
@@ -109,10 +118,18 @@ def check_levels(param, warning, critical, message, ok=[]):
         return 2
 
 
-#
-# TODO: Document
-#
 def get_digest_auth_json(host, port, uri, user, password, payload):
+    """
+    HTTP GET with Digest Authentication. Returns JSON result.
+    Base URI of http://{host}:{port}/management is used
+    
+    :param host: JBossAS hostname
+    :param port: JBossAS HTTP Management Port
+    :param uri: URL fragment
+    :param user: management username
+    :param password: password
+    :param payload: JSON payload 
+    """
     try:
         url = base_url(host, port) + uri
         res = requests.get(url, params=payload, auth=HTTPDigestAuth(user, password))
@@ -128,12 +145,22 @@ def get_digest_auth_json(host, port, uri, user, password, payload):
         return data
     except Exception, e:
         # The server could be down; make this CRITICAL.
-        return exit_with_general_critical(e)
+        print "CRITICAL - JbossAS Error:", e
+        sys.exit(2)
 
-#
-# TODO: Document
-#
+
 def post_digest_auth_json(host, port, uri, user, password, payload):
+    """
+    HTTP POST with Digest Authentication. Returns JSON result.
+    Base URI of http://{host}:{port}/management is used
+    
+    :param host: JBossAS hostname
+    :param port: JBossAS HTTP Management Port
+    :param uri: URL fragment
+    :param user: management username
+    :param password: password
+    :param payload: JSON payload 
+    """
     try:
         url = base_url(host, port) + uri
         headers = {'content-type': 'application/json'}        
@@ -150,17 +177,21 @@ def post_digest_auth_json(host, port, uri, user, password, payload):
         return data
     except Exception, e:
         # The server could be down; make this CRITICAL.
-        return exit_with_general_critical(e)
+        print "CRITICAL - JbossAS Error:", e
+        sys.exit(2)
 
-#
-# Provides base URL for HTTP Management API
-#
+
 def base_url(host, port):
+    """
+    Provides base URL for HTTP Management API
+    
+    :param host: JBossAS hostname
+    :param port: JBossAS HTTP Management Port
+    """
     url = "http://{host}:{port}/management".format(host=host, port=port)
     return url
-#
-# TODO: Document
-#
+
+
 def main(argv):
     
     global ds_stat_types
@@ -227,8 +258,15 @@ def main(argv):
 
 
 def exit_with_general_warning(e):
+    """
+    
+    :param e: exception
+    """
     if isinstance(e, SystemExit):
         return e
+    elif isinstance(e, ValueError):
+        print "WARNING - General JbossAS Error:", e
+        sys.exit(1)
     else:
         print "WARNING - General JbossAS warning:", e
     return 1
@@ -237,6 +275,9 @@ def exit_with_general_warning(e):
 def exit_with_general_critical(e):
     if isinstance(e, SystemExit):
         return e
+    elif isinstance(e, ValueError):
+        print "CRITICAL - General JbossAS Error:", e
+        sys.exit(2)
     else:
         print "CRITICAL - General JbossAS Error:", e
     return 2
@@ -260,24 +301,36 @@ def check_server_status(host, port, user, passwd, warning, critical, perf_data):
         return exit_with_general_critical(e)
 
 
+def get_memory_usage(host, port, user, passwd, is_heap, memory_value):
+    try:
+        if memory_value not in ['max', 'init', 'used', 'committed']:
+            return exit_with_general_critical(ValueError("The memory value type of '%s' is not valid" % memory_value))
+        
+        payload = {'include-runtime': 'true'}
+        url = "/core-service/platform-mbean/type/memory"
+        
+        data = get_digest_auth_json(host, port, url, user, passwd, payload)
+        
+        if is_heap:
+            data = data['heap-memory-usage'][memory_value] / (1024 * 1024)
+        else:
+            data = data['non-heap-memory-usage'][memory_value] / (1024 * 1024)
+        
+        return data
+    except Exception, e:
+        return exit_with_general_critical(e)
+
 def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
     warning = warning or 512
     critical = critical or 1024
     
     try:
-        if memory_value not in ['max', 'init', 'used', 'committed']:
-            return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
+        data = get_memory_usage(host, port, user, passwd, True, memory_value)
         
-        payload = {'include-runtime': 'true'}
-        url = "/core-service/platform-mbean/type/memory"
-        
-        res = get_digest_auth_json(host, port, url, user, passwd, payload)
-        res = res['heap-memory-usage'][memory_value] / (1024 * 1024)
-        
-        message = "Heap Memory '%s' %s MiB" % (memory_value, res)
-        message += performance_data(perf_data, [(res, "heap_usage", warning, critical)])
+        message = "Heap Memory '%s' %s MiB" % (memory_value, data)
+        message += performance_data(perf_data, [(data, "heap_usage", warning, critical)])
     
-        return check_levels(res, warning, critical, message)
+        return check_levels(data, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
@@ -286,19 +339,12 @@ def check_non_heap_usage(host, port, user, passwd, memory_value, warning, critic
     critical = critical or 256
     
     try:
-        if memory_value not in ['max', 'init', 'used', 'committed']:
-            return exit_with_general_critical("The memory value type of '%s' is not valid" % memory_value)
-            
-        payload = {'include-runtime': 'true'}
-        url = "/core-service/platform-mbean/type/memory"
+        data = get_memory_usage(host, port, user, passwd, False, memory_value)
         
-        res = get_digest_auth_json(host, port, url, user, passwd, payload)
-        res = res['non-heap-memory-usage'][memory_value] / (1024 * 1024)
-        
-        message = "Non Heap Memory '%s' %s MiB" % (memory_value, res)
-        message += performance_data(perf_data, [(res, "non_heap_usage", warning, critical)])
+        message = "Non Heap Memory '%s' %s MiB" % (memory_value, data)
+        message += performance_data(perf_data, [(data, "non_heap_usage", warning, critical)])
     
-        return check_levels(res, warning, critical, message)
+        return check_levels(data, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
@@ -413,7 +459,7 @@ def check_xa_datasource(host, port, user, passwd, ds_name, ds_stat_type, warning
     try:    
         data = get_datasource_stats(host, port, user, passwd, True, ds_name, ds_stat_type)
 
-        message = "DataSource %s %s" % (ds_stat_type, data)
+        message = "XA DataSource %s %s" % (ds_stat_type, data)
         message += performance_data(perf_data, [(data, "xa_datasource", warning, critical)])
         return check_levels(data, warning, critical, message)
     except Exception, e:
