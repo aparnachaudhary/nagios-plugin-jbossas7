@@ -21,7 +21,7 @@ import re
 import os
 import requests
 from requests.auth import HTTPDigestAuth
-#from datetime import timedelta
+# from datetime import timedelta
 
 try:
     import json
@@ -156,7 +156,7 @@ def post_digest_auth_json(host, port, uri, user, password, payload):
 # Provides base URL for HTTP Management API
 #
 def base_url(host, port):
-    url = "http://{host}:{port}/management".format(host=host,port=port)
+    url = "http://{host}:{port}/management".format(host=host, port=port)
     return url
 #
 # TODO: Document
@@ -175,7 +175,7 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status','heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource', 'threading'])
+                 choices=['server_status', 'heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource', 'threading'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
     p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|committed] from heap_usage and non_heap_usage')
     p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
@@ -271,8 +271,8 @@ def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, 
         payload = {'include-runtime': 'true'}
         url = "/core-service/platform-mbean/type/memory"
         
-        res = get_digest_auth_json(host, port, url,user, passwd, payload)
-        res = res['heap-memory-usage'][memory_value] / (1024*1024)
+        res = get_digest_auth_json(host, port, url, user, passwd, payload)
+        res = res['heap-memory-usage'][memory_value] / (1024 * 1024)
         
         message = "Heap Memory '%s' %s MiB" % (memory_value, res)
         message += performance_data(perf_data, [(res, "heap_usage", warning, critical)])
@@ -292,8 +292,8 @@ def check_non_heap_usage(host, port, user, passwd, memory_value, warning, critic
         payload = {'include-runtime': 'true'}
         url = "/core-service/platform-mbean/type/memory"
         
-        res = get_digest_auth_json(host, port, url,user, passwd, payload)
-        res = res['non-heap-memory-usage'][memory_value] / (1024*1024)
+        res = get_digest_auth_json(host, port, url, user, passwd, payload)
+        res = res['non-heap-memory-usage'][memory_value] / (1024 * 1024)
         
         message = "Non Heap Memory '%s' %s MiB" % (memory_value, res)
         message += performance_data(perf_data, [(res, "non_heap_usage", warning, critical)])
@@ -312,17 +312,17 @@ def check_gctime_percent(host, port, user, passwd, gc_type, warning, critical, p
             return exit_with_general_critical("The GC type of '%s' is not valid" % gc_type)
             
         url = "/core-service/platform-mbean/type/runtime"
-        res = get_digest_auth_json(host, port, url,user, passwd, None)
+        res = get_digest_auth_json(host, port, url, user, passwd, None)
         uptime = res['uptime']
         
         payload = {'include-runtime': 'true', 'recursive':'true'}
         url = "/core-service/platform-mbean/type/garbage-collector"
-        res = get_digest_auth_json(host, port, url,user, passwd, payload)
+        res = get_digest_auth_json(host, port, url, user, passwd, payload)
         gctime = res['name'][gc_type]['collection-time']
         
-        percent = float(gctime*100)/uptime
+        percent = float(gctime * 100) / uptime
         
-        message = "GC percentage for '%s'  %s " %(gc_type, percent)
+        message = "GC percentage for '%s'  %s " % (gc_type, percent)
         message += performance_data(perf_data, [(percent, "gctime_percent", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
@@ -340,7 +340,7 @@ def check_threading(host, port, user, passwd, thread_stat_type, warning, critica
         payload = {'include-runtime': 'true'}
         url = "/core-service/platform-mbean/type/threading"
         
-        data = get_digest_auth_json(host, port, url,user, passwd, payload)
+        data = get_digest_auth_json(host, port, url, user, passwd, payload)
         data = data[thread_stat_type]
         
         message = "Threading Statistics '%s':%s " % (thread_stat_type, data)
@@ -360,9 +360,9 @@ def check_queue_depth(host, port, user, passwd, queue_name, warning, critical, p
             return exit_with_general_critical("The queue name '%s' is not valid" % queue_name)
             
         payload = {'include-runtime': 'true', 'recursive':'true'}
-        url = "/subsystem/messaging/hornetq-server/default/jms-queue/"+queue_name
+        url = "/subsystem/messaging/hornetq-server/default/jms-queue/" + queue_name
         
-        res = get_digest_auth_json(host, port, url,user, passwd, payload)
+        res = get_digest_auth_json(host, port, url, user, passwd, payload)
         res = res['delivering-count']
         
         message = "Queue Depth %s" % res
@@ -381,11 +381,11 @@ def get_datasource_stats(host, port, user, passwd, is_xa, ds_name, ds_stat_type)
             
         payload = {'include-runtime': 'true', 'recursive':'true'}
         if is_xa:
-            url = "/subsystem/datasources/xa-data-source/"+ds_name+"/statistics/pool/"
+            url = "/subsystem/datasources/xa-data-source/" + ds_name + "/statistics/pool/"
         else:
-            url = "/subsystem/datasources/data-source/"+ds_name+"/statistics/pool/"
+            url = "/subsystem/datasources/data-source/" + ds_name + "/statistics/pool/"
         
-        data = get_digest_auth_json(host, port, url,user, passwd, payload)
+        data = get_digest_auth_json(host, port, url, user, passwd, payload)
         data = data[ds_stat_type]
         
         return data
@@ -400,7 +400,7 @@ def check_non_xa_datasource(host, port, user, passwd, ds_name, ds_stat_type, war
     try:    
         data = get_datasource_stats(host, port, user, passwd, False, ds_name, ds_stat_type)
         
-        message = "DataSource %s %s" %(ds_stat_type,data)
+        message = "DataSource %s %s" % (ds_stat_type, data)
         message += performance_data(perf_data, [(data, "datasource", warning, critical)])
         return check_levels(data, warning, critical, message)
     except Exception, e:
@@ -413,14 +413,14 @@ def check_xa_datasource(host, port, user, passwd, ds_name, ds_stat_type, warning
     try:    
         data = get_datasource_stats(host, port, user, passwd, True, ds_name, ds_stat_type)
 
-        message = "DataSource %s %s" %(ds_stat_type,data)
+        message = "DataSource %s %s" % (ds_stat_type, data)
         message += performance_data(perf_data, [(data, "xa_datasource", warning, critical)])
         return check_levels(data, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
 def build_file_name(host, action):
-    #done this way so it will work when run independently and from shell
+    # done this way so it will work when run independently and from shell
     module_name = re.match('(.*//*)*(.*)\..*', __file__).group(2)
     return "/tmp/" + module_name + "_data/" + host + "-" + action + ".data"
 
@@ -436,7 +436,7 @@ def write_values(file_name, string):
     try:
         f = open(file_name, 'w')
     except IOError, e:
-        #try creating
+        # try creating
         if (e.errno == 2):
             ensure_dir(file_name)
             f = open(file_name, 'w')
@@ -456,7 +456,7 @@ def read_values(file_name):
         return 0, data
     except IOError, e:
         if (e.errno == 2):
-            #no previous data
+            # no previous data
             return 1, ''
     except Exception, e:
         return 2, None
