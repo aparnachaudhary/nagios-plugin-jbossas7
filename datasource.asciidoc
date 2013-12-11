@@ -1,0 +1,85 @@
+===== Check Non-XA Datasource Active Connection Count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource active connection count
+    check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!ActiveCount
+ }
+
+===== Check Non-XA Datasource Average Blocking time =====
+
+The average time spent blocking for a connection.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource average blocking time
+    check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!AverageBlockingTime
+ }
+
+===== Check XA Datasource Active Connection Count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Datasource active connection count
+    check_command           check_jboss_datasource!xa_datasource!9990!admin!password123!ds_name!ActiveCount
+ }
+
+Following statistics are supported for both xa and non-xa datasources:
+
+.Table Datasource Monitoring Metrics
+[cols="3*", options="header"]
+|===
+|Metric Type |Description |Unit
+
+|ActiveCount
+|The number of active connections. Each of the connections is either in use by an application or available in the pool.
+|-
+
+|AvailableCount
+|TThe number of available connections in the pool
+|-
+
+|AverageBlockingTime
+|The average time spent blocking on obtaining an exclusive lock on the pool.
+|milliseconds
+
+|AverageCreationTime
+|The average time spent creating a connection.
+|milliseconds
+
+|CreatedCount
+|The number of connections created
+|-
+
+|DestroyedCount
+|The number of connections destroyed
+|-
+
+|MaxCreationTime
+|The maximum time it took to create a connection.
+|milliseconds
+
+|MaxUsedCount
+|The maximum number of connections used
+|-
+
+|MaxWaitTime
+|The maximum time spent waiting for an exclusive lock on the pool
+|milliseconds
+
+|TimedOut
+|The number of timed out connections
+|milliseconds
+
+|TotalBlockingTime
+|The total time spent waiting for an exclusive lock on the pool.
+|milliseconds
+
+|TotalCreationTime
+|The total time spent creating connections. 
+|milliseconds
+
+|===
