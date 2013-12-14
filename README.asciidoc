@@ -6,11 +6,11 @@ Other plugins need additional +SAR+ or +WAR+ to be installed on the application 
 The main advantage of this plugin is it leverages the +REST+ API of JBossAS. This allows us to monitor the application server without any additional configurations and installations.
 
 link:#runtime[Server Status] :: Checks JBossAS status
-link:memory.asciidoc[JVM Memory Utilization] :: Checks Heap, Non Heap, Old Gen, Eden Space, Perm Gen Utilization
-link:#garbage-collection[Garbage Collection] :: Checks Garbage collection rate
+link:memory.asciidoc[JVM Memory Utilization] :: Checks Heap, Non Heap, Old Gen, Eden Space, Perm Gen, and Code cache utilization
+link:#garbage-collection[Garbage Collection] :: Checks garbage collection rate
 link:#messaging[HornetQ Messaging] :: Checks message queue depths
-link:datasource.asciidoc[DataSource Pool Usage] :: Checks datasource pool Utilization
-link:#threading[Threading] :: Checks thread pool Utilization
+link:datasource.asciidoc[DataSource Pool Usage] :: Checks datasource pool utilization
+link:threading.asciidoc[Threading] :: Checks JVM process thread utilization
 
 === Requirements: ===
 * Nagios
@@ -36,11 +36,6 @@ Edit your commands.cfg and add the following
     command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -q $ARG5$ -W $ARG6$ -C $ARG7$
  }
 
- define command {
-    command_name    check_jboss_threading
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -t $ARG5$ -W $ARG6$ -C $ARG7$
- }
- 
 (add -D to the command if you want to add perfdata to the output)
 Then you can reference it like the following.
 
@@ -68,35 +63,6 @@ Then you can reference it like the following.
     check_command           check_jboss_gc!gctime_percent!9990!admin!password123!gc_type!0.5!1.0
  }
 
-
-==== Threading ====
-
-===== Check thread count =====
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Threading thread count
-    check_command           check_jboss_threading!threading!9990!admin!password123!thread-count
- }
-
-===== Check daemon thread count =====
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Threading daemon thread count
-    check_command           check_jboss_threading!threading!9990!admin!password123!daemon-thread-count
- }
-
-===== Check total started thread count =====
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Threading total started thread count
-    check_command           check_jboss_threading!threading!9990!admin!password123!total-started-thread-count
- }
 
 ==== Messaging ====
 
