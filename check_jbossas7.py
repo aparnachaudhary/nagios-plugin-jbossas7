@@ -208,7 +208,6 @@ def main(argv):
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
                  choices=['server_status', 'heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource', 'threading'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
-    p.add_option('-m', '--memoryvalue', action='store', dest='memory_value', default='used', help='The memory value type to check [max|init|used|committed] from heap_usage and non_heap_usage')
     p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
     p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
     p.add_option('-d', '--datasource', action='store', dest='datasource_name', default=None, help='The datasource name for which you want to retrieve statistics')
@@ -220,7 +219,6 @@ def main(argv):
     port = options.port
     user = options.user
     passwd = options.passwd
-    memory_value = options.memory_value
     gc_type = options.gc_type
     queue_name = options.queue_name
     datasource_name = options.datasource_name
@@ -244,9 +242,9 @@ def main(argv):
     elif action == "queue_depth":
         return check_queue_depth(host, port, user, passwd, queue_name, warning, critical, perf_data)
     elif action == "heap_usage":
-        return check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
+        return check_heap_usage(host, port, user, passwd, warning, critical, perf_data)
     elif action == "non_heap_usage":
-        return check_non_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data)
+        return check_non_heap_usage(host, port, user, passwd, warning, critical, perf_data)
     elif action == "datasource":
         return check_non_xa_datasource(host, port, user, passwd, datasource_name, ds_stat_type, warning, critical, perf_data)
     elif action == "xa_datasource":
@@ -303,9 +301,6 @@ def check_server_status(host, port, user, passwd, warning, critical, perf_data):
 
 def get_memory_usage(host, port, user, passwd, is_heap, memory_value):
     try:
-        if memory_value not in ['max', 'init', 'used', 'committed']:
-            return exit_with_general_critical(ValueError("The memory value type of '%s' is not valid" % memory_value))
-        
         payload = {'include-runtime': 'true'}
         url = "/core-service/platform-mbean/type/memory"
         
@@ -320,31 +315,35 @@ def get_memory_usage(host, port, user, passwd, is_heap, memory_value):
     except Exception, e:
         return exit_with_general_critical(e)
 
-def check_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
-    warning = warning or 512
-    critical = critical or 1024
+def check_heap_usage(host, port, user, passwd, warning, critical, perf_data):
+    warning = warning or 80
+    critical = critical or 90
     
     try:
-        data = get_memory_usage(host, port, user, passwd, True, memory_value)
+        used_heap = get_memory_usage(host, port, user, passwd, True, 'used')
+        max_heap = get_memory_usage(host, port, user, passwd, True, 'max')
+        percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "Heap Memory '%s' %s MiB" % (memory_value, data)
-        message += performance_data(perf_data, [(data, "heap_usage", warning, critical)])
+        message = "Heap Memory Utilization %s of %s MiB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [(percent, "heap_usage", warning, critical)])
     
-        return check_levels(data, warning, critical, message)
+        return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
-def check_non_heap_usage(host, port, user, passwd, memory_value, warning, critical, perf_data):
-    warning = warning or 128
-    critical = critical or 256
+def check_non_heap_usage(host, port, user, passwd, warning, critical, perf_data):
+    warning = warning or 80
+    critical = critical or 90
     
     try:
-        data = get_memory_usage(host, port, user, passwd, False, memory_value)
+        used_heap = get_memory_usage(host, port, user, passwd, False, 'used')
+        max_heap = get_memory_usage(host, port, user, passwd, False, 'max')
+        percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "Non Heap Memory '%s' %s MiB" % (memory_value, data)
-        message += performance_data(perf_data, [(data, "non_heap_usage", warning, critical)])
+        message = "Non Heap Memory Utilization %s of %s MiB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [(percent, "non_heap_usage", warning, critical)])
     
-        return check_levels(data, warning, critical, message)
+        return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
