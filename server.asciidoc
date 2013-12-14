@@ -1,0 +1,31 @@
+== Check Server Status ==
+
+This section provides example configuration for checking server status.
+
+=== Installation: ===
+
+Edit your commands.cfg and add the following
+
+ define command {
+    command_name    check_jboss
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -W $ARG5$ -C $ARG6$
+ }
+
+(add -D to the command if you want to add perfdata to the output)
+Then you can reference it like the following.
+
+=== Usage: ===
+
+==== Check Server Status ====
+
+The option +server_status+ allows you to monitor the current server status.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Connectivity Check
+    check_command           check_jboss!server_status!9990!admin!password123
+ }
+
+==== TODO ====
+Update this check in future to support status reporting based on consolidation of other metrics like memory usage and thread pool usage.
