@@ -1,0 +1,27 @@
+== Check Messaging subsystem ==
+
+=== Installation: ===
+
+Edit your commands.cfg and add the following
+
+ define command {
+    command_name    check_jboss_messaging
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -q $ARG5$ -W $ARG6$ -C $ARG7$
+ }
+
+(add -D to the command if you want to add perfdata to the output)
+Then you can reference it like the following.
+
+=== Usage: ===
+
+==== Check JMS Queue Depth ====
+
+Checks number of messages currently in queue.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Message queue depth
+    check_command           check_jboss_messaging!queue_depth!9990!admin!password123!queue_name
+ }
+
