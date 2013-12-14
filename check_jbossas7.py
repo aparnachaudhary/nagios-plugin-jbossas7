@@ -206,7 +206,7 @@ def main(argv):
     p.add_option('-W', '--warning', action='store', dest='warning', default=None, help='The warning threshold we want to set')
     p.add_option('-C', '--critical', action='store', dest='critical', default=None, help='The critical threshold we want to set')
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='server_status', help='The action you want to take',
-                 choices=['server_status', 'heap_usage', 'non_heap_usage', 'gctime_percent', 'queue_depth', 'datasource', 'xa_datasource', 'threading'])
+                 choices=['server_status', 'heap_usage', 'non_heap_usage', 'gctime', 'queue_depth', 'datasource', 'xa_datasource', 'threading'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
     p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
     p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
@@ -237,8 +237,8 @@ def main(argv):
 
     if action == "server_status":
         return check_server_status(host, port, user, passwd, warning, critical, perf_data)
-    elif action == "gctime_percent":
-        return check_gctime_percent(host, port, user, passwd, gc_type, warning, critical, perf_data)
+    elif action == "gctime":
+        return check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data)
     elif action == "queue_depth":
         return check_queue_depth(host, port, user, passwd, queue_name, warning, critical, perf_data)
     elif action == "heap_usage":
@@ -347,30 +347,27 @@ def check_non_heap_usage(host, port, user, passwd, warning, critical, perf_data)
     except Exception, e:
         return exit_with_general_critical(e)
 
-def check_gctime_percent(host, port, user, passwd, gc_type, warning, critical, perf_data):
+def check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data):
     # Make sure you configure right values for your application    
-    warning = warning or 0.5
-    critical = critical or 1.0
+    warning = warning or 500
+    critical = critical or 1000
     
     try:
         if gc_type not in ['PS_MarkSweep', 'PS_Scavenge']:
             return exit_with_general_critical("The GC type of '%s' is not valid" % gc_type)
             
-        url = "/core-service/platform-mbean/type/runtime"
-        res = get_digest_auth_json(host, port, url, user, passwd, None)
-        uptime = res['uptime']
-        
         payload = {'include-runtime': 'true', 'recursive':'true'}
         url = "/core-service/platform-mbean/type/garbage-collector"
         res = get_digest_auth_json(host, port, url, user, passwd, payload)
-        gctime = res['name'][gc_type]['collection-time']
+        gc_time = res['name'][gc_type]['collection-time']
+        gc_count = res['name'][gc_type]['collection-count']
         
-        percent = float(gctime * 100) / uptime
+        avg_gc_time = gc_time / gc_count
         
-        message = "GC percentage for '%s'  %s " % (gc_type, percent)
-        message += performance_data(perf_data, [(percent, "gctime_percent", warning, critical)])
+        message = "GC '%s' collection-time %s collection-count %s avg-time %s" % (gc_type, gc_time, gc_count, avg_gc_time)
+        message += performance_data(perf_data, [(avg_gc_time, "gctime", warning, critical)])
     
-        return check_levels(percent, warning, critical, message)
+        return check_levels(avg_gc_time, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 

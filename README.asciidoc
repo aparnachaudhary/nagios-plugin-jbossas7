@@ -5,75 +5,60 @@ This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The
 Other plugins need additional +SAR+ or +WAR+ to be installed on the application server. Typically in Enterprise setups; it is sometimes not allowed to perform any additional installations on the target system.
 The main advantage of this plugin is it leverages the +REST+ API of JBossAS. This allows us to monitor the application server without any additional configurations and installations.
 
-link:#runtime[Server Status] :: Checks JBossAS status
-link:memory.asciidoc[JVM Memory Utilization] :: Checks Heap, Non Heap, Old Gen, Eden Space, Perm Gen, and Code cache utilization
-link:#garbage-collection[Garbage Collection] :: Checks garbage collection rate
-link:#messaging[HornetQ Messaging] :: Checks message queue depths
-link:datasource.asciidoc[DataSource Pool Usage] :: Checks datasource pool utilization
-link:threading.asciidoc[Threading] :: Checks JVM process thread utilization
-
 === Requirements: ===
 * Nagios
 * Python 2.7 onwards (with +requests+ module used for digest authentication)
 * JBossAS 7.1.1-Final
 
-=== Installation: ===
-
-Edit your commands.cfg and add the following
-
- define command {
-    command_name    check_jboss
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -W $ARG5$ -C $ARG6$
- }
- 
- define command {
-    command_name    check_jboss_gc
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -g $ARG5$ -W $ARG6$ -C $ARG7$
- }
- 
- define command {
-    command_name    check_jboss_messaging
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -q $ARG5$ -W $ARG6$ -C $ARG7$
- }
-
-(add -D to the command if you want to add perfdata to the output)
-Then you can reference it like the following.
-
 === Usage: ===
 
-==== Runtime ====
+The check script supports following options. Details about monitoring different resources is available in respective sub-sections.
 
-===== Check Server State =====
- 
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Connectivity Check
-    check_command           check_jboss!server_status!9990!admin!password123!!
- }
+[source,python]
+----
+server:nagios-plugin-jbossas7 Aparna$ python check_jbossas7.py --help
+Usage: check_jbossas7.py [options]
 
-==== Garbage Collection ====
+This Nagios plugin checks the health of JBossAS.
 
-===== Check GC Time =====
+Options:
+  -h, --help            show this help message and exit
+  -H HOST, --host=HOST  The hostname you want to connect to
+  -P PORT, --port=PORT  The port JBoss management console is runnung on
+  -u USER, --user=USER  The username you want to login as
+  -p PASSWD, --pass=PASSWD
+                        The password you want to use for that user
+  -W WARNING, --warning=WARNING
+                        The warning threshold we want to set
+  -C CRITICAL, --critical=CRITICAL
+                        The critical threshold we want to set
+  -A ACTION, --action=ACTION
+                        The action you want to take
+  -D, --perf-data       Enable output of Nagios performance data
+  -g GC_TYPE, --gctype=GC_TYPE
+                        The GC type to check [PS_MarkSweep|PS_Scavenge] from
+                        gctime_percent
+  -q QUEUE_NAME, --queuename=QUEUE_NAME
+                        The queue name for which you want to retrieve queue
+                        depth
+  -d DATASOURCE_NAME, --datasource=DATASOURCE_NAME
+                        The datasource name for which you want to retrieve
+                        statistics
+  -s DS_STAT_TYPE, --poolstats=DS_STAT_TYPE
+                        The datasource pool statistics type
+  -t THREAD_STAT_TYPE, --threadstats=THREAD_STAT_TYPE
+                        The threading statistics type
+----
 
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Percent GC time Check
-    check_command           check_jboss_gc!gctime_percent!9990!admin!password123!gc_type!0.5!1.0
- }
+Currently the plugin supports monitoring of following resources and sub-systems.
 
+link:server.asciidoc[Server Status] :: Checks JBossAS status
+link:memory.asciidoc[JVM Memory Utilization] :: Checks Heap, Non Heap, Old Gen, Eden Space, Perm Gen, and Code cache utilization
+link:gc.asciidoc[Garbage Collection] :: Checks garbage collection rate
+link:messaging.asciidoc[HornetQ Messaging] :: Checks message queue depths
+link:datasource.asciidoc[DataSource Pool Usage] :: Checks datasource pool utilization
+link:threading.asciidoc[Threading] :: Checks JVM process thread utilization
 
-==== Messaging ====
-
-===== Check JMS Queue Depth =====
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Message queue depth
-    check_command           check_jboss_messaging!queue_depth!9990!admin!password123!queue_name
- }
 
 === Licensing and Copyright: ===
 
