@@ -14,7 +14,12 @@ Then you can reference it like the following.
 
 === Usage: ===
 
-===== Check Heap Memory Usage =====
+===== Check Heap Utilization =====
+
+The option +heap_usage+ allows you to monitor the Heap Utilization of the JVM. Default thresholds are +WARNING+ - 80 inclusive and +CRITICAL+ - 90 inclusive.
+
+In the example below 80 is the +WARNING+ threshold (inclusive) while 90 is the +CRITICAL+ threshold.
+These thresholds are compared to the perecentage of +used+ heap against +max+ available heap.
 
  define service {
     use                     generic-service
@@ -23,7 +28,15 @@ Then you can reference it like the following.
     check_command           check_jboss_memory!heap_usage!9990!admin!password123!80!90
  }
 
-===== Check Non Heap Usage =====
+Sample output:
+
++OK - Heap Memory Utilization 39 of 455 MiB |heap_usage=8.57;80;90+ 
+
+===== Check Non Heap Utilization =====
+
+The option +non_heap_usage+ allows you to monitor the overall Non Heap Utilization of the JVM. Default thresholds are +WARNING+ - 80 inclusive and +CRITICAL+ - 90 inclusive.
+In the example below 80 is the +WARNING+ threshold while 90 is the +CRITICAL+ threshold.
+These thresholds are compared to the perecentage of +used+ non heap space against +max+ available non heap space.
 
  define service {
     use                     generic-service
@@ -32,7 +45,15 @@ Then you can reference it like the following.
     check_command           check_jboss_memory!non_heap_usage!9990!admin!password123!80!90
  }
 
-===== Check Perm Gen Usage =====
+Sample output:
 
-===== Check Code Cache Usage =====
++OK - Non Heap Memory Utilization 78 of 352 MiB |non_heap_usage=22.16;80;90+
+
+===== Check Eden Space Utilization =====
+
+===== Check Old Gen Utilization =====
+
+===== Check Perm Gen Utilization =====
+
+===== Check Code Cache Utilization =====
 
