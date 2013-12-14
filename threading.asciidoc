@@ -1,0 +1,43 @@
+== Check JBossAS Threading ==
+
+=== Installation: ===
+
+Edit your commands.cfg and add the following
+
+ define command {
+    command_name    check_jboss_threading
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -t $ARG5$ -W $ARG6$ -C $ARG7$
+ }
+ 
+(add -D to the command if you want to add perfdata to the output)
+Then you can reference it like the following.
+
+=== Usage: ===
+
+===== Check thread count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Threading thread count
+    check_command           check_jboss_threading!threading!9990!admin!password123!thread-count
+ }
+
+===== Check daemon thread count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Threading daemon thread count
+    check_command           check_jboss_threading!threading!9990!admin!password123!daemon-thread-count
+ }
+
+===== Check total started thread count =====
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Threading total started thread count
+    check_command           check_jboss_threading!threading!9990!admin!password123!total-started-thread-count
+ }
+
