@@ -1,20 +1,20 @@
 == Nagios Plugin JBossAS7 ==
 
-This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The plugin uses HTTP-JSON based API (JBossAS REST Management API) to collect server statistics.
+This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The plugin uses HTTP-JSON based API (JBossAS REST Management API) to collect server statistics. The plugin currently supports JBoss standalone mode.
 
-Supports monitoring of KPI for:
+Other plugins need additional +SAR+ or +WAR+ to be installed on the application server. Typically in Enterprise setups; it is sometimes not allowed to perform any additional installations on the target system.
+The main advantage of this plugin is it leverages the +REST+ API of JBossAS. This allows us to monitor the application server without any additional configurations and installations.
 
-* link:#runtime[Server Status]
-* link:#memory[Heap/Non-Heap Memory Usage]
-* link:#garbage-collection[Garbage Collection]
-* link:#messaging[HornetQ Messaging]
-* link:#datasource[DataSource]
-* link:#threading[Threading]
-* link:#web[Web]
+link:#runtime[Server Status] :: Checks JBossAS status
+link:memory.asciidoc[JVM Memory Utilization] :: Checks Heap, Non Heap, Old Gen, Eden Space, Perm Gen Utilization
+link:#garbage-collection[Garbage Collection] :: Checks Garbage collection rate
+link:#messaging[HornetQ Messaging] :: Checks message queue depths
+link:datasource.asciidoc[DataSource Pool Usage] :: Checks datasource pool Utilization
+link:#threading[Threading] :: Checks thread pool Utilization
 
 === Requirements: ===
 * Nagios
-* Python
+* Python 2.7 onwards (with +requests+ module used for digest authentication)
 * JBossAS 7.1.1-Final
 
 === Installation: ===
@@ -27,11 +27,6 @@ Edit your commands.cfg and add the following
  }
  
  define command {
-    command_name    check_jboss_memory
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -m $ARG5$ -W $ARG6$ -C $ARG7$
- }
-
- define command {
     command_name    check_jboss_gc
     command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -g $ARG5$ -W $ARG6$ -C $ARG7$
  }
@@ -39,11 +34,6 @@ Edit your commands.cfg and add the following
  define command {
     command_name    check_jboss_messaging
     command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -q $ARG5$ -W $ARG6$ -C $ARG7$
- }
-
- define command {
-    command_name    check_jboss_datasource
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -d $ARG5$ -s $ARG6$ -W $ARG7$ -C $ARG8$
  }
 
  define command {
@@ -66,31 +56,6 @@ Then you can reference it like the following.
     service_description     JBossAS Server Connectivity Check
     check_command           check_jboss!server_status!9990!admin!password123!!
  }
-
-==== Memory ====
-
-
-===== Check Heap Memory Usage =====
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Heap Memory Usage Check
-    check_command           check_jboss_memory!heap_usage!9990!admin!password123!memory_type!512!1024
- }
-
-===== Check Non Heap Usage =====
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Non-Heap Memory Usage Check
-    check_command           check_jboss_memory!non_heap_usage!9990!admin!password123!memory_type!128!256
- }
-
-===== Check Perm Gen Usage =====
-
-===== Check Code Cache Usage =====
 
 ==== Garbage Collection ====
 
@@ -131,34 +96,6 @@ Then you can reference it like the following.
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Threading total started thread count
     check_command           check_jboss_threading!threading!9990!admin!password123!total-started-thread-count
- }
-
-
-==== link:datasource.asciidoc[DataSource] ====
-
-This section provides example configuration for collecting datasource statistics. 
-In addition to these, more metrics are supported for datasource monitoring. Detailed documentation is available link:datasource.asciidoc[here].
-
-===== Check Non-XA Datasource Active Connection Count =====
-
-Provides active connections used by applications or available in the pool.
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Datasource active connection count
-    check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!ActiveCount
- }
-
-===== Check XA Datasource Average Blocking time =====
-
-Provides average time spent blocking for a connection.
-
- define service {
-    use                     generic-service
-    hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Datasource average blocking time
-    check_command           check_jboss_datasource!xa_datasource!9990!admin!password123!ds_name!AverageBlockingTime
  }
 
 ==== Messaging ====
