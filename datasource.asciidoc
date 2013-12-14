@@ -16,7 +16,7 @@ Then you can reference it like the following.
 
 === Usage ===
 
-===== Check Non-XA Datasource Active Connection Count =====
+==== Check Non-XA Datasource Active Connection Count ====
 
 Provides active connections used by applications or available in the pool.
 
@@ -36,7 +36,7 @@ If you want to override the default thresholds for +WARNING+ and +CRITICAL+; con
     check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!ActiveCount!10!20
  }
 
-===== Check Non-XA Datasource Average Blocking time =====
+==== Check Non-XA Datasource Average Blocking time ====
 
 The average time spent blocking for a connection.
 
@@ -47,7 +47,7 @@ The average time spent blocking for a connection.
     check_command           check_jboss_datasource!datasource!9990!admin!password123!ds_name!AverageBlockingTime
  }
 
-===== Check XA Datasource Active Connection Count =====
+==== Check XA Datasource Active Connection Count ====
 
  define service {
     use                     generic-service
@@ -56,7 +56,7 @@ The average time spent blocking for a connection.
     check_command           check_jboss_datasource!xa_datasource!9990!admin!password123!ds_name!ActiveCount
  }
 
-Following statistics are supported for both xa and non-xa datasources:
+In addition to above examples; following statistics are also supported for both xa and non-xa datasources:
 
 .Table Datasource Monitoring Metrics
 [cols="3*", options="header"]
