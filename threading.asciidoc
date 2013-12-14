@@ -1,5 +1,7 @@
 == Check JBossAS Threading ==
 
+This section provides supported configuration for collecting threading statistics. 
+
 === Installation: ===
 
 Edit your commands.cfg and add the following
@@ -14,7 +16,9 @@ Then you can reference it like the following.
 
 === Usage: ===
 
-===== Check thread count =====
+===== Check live thread count =====
+
+Checks the current number of live threads including both daemon and non-daemon threads.
 
  define service {
     use                     generic-service
@@ -23,7 +27,20 @@ Then you can reference it like the following.
     check_command           check_jboss_threading!threading!9990!admin!password123!thread-count
  }
 
+===== Check peak thread count =====
+
+Checks the peak live thread count since the Java virtual machine started or peak was reset.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Threading peak thread count
+    check_command           check_jboss_threading!threading!9990!admin!password123!peak-thread-count
+ }
+
 ===== Check daemon thread count =====
+
+Checks the current number of live daemon threads.
 
  define service {
     use                     generic-service
@@ -33,6 +50,8 @@ Then you can reference it like the following.
  }
 
 ===== Check total started thread count =====
+
+Checks the total number of threads created and also started since the Java virtual machine started.
 
  define service {
     use                     generic-service
