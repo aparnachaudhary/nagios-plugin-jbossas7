@@ -16,7 +16,7 @@ Then you can reference it like the following.
 
 === Usage: ===
 
-===== Check Minor GC Time =====
+==== Check Minor GC Time ====
 
 The option +gctime+ allows you to monitor the average minor garbage collection time in milliseconds.
 
@@ -27,11 +27,12 @@ The option +gctime+ allows you to monitor the average minor garbage collection t
     check_command           check_jboss_gc!gctime!9990!admin!password123!PS_Scavenge!50!100
  }
 
+
 Sample output:
 
-+OK - GC 'PS_Scavenge' collection-time 1776 collection-count 300 avg-time 5 |gctime=5;50;100 +
++OK - GC 'PS_Scavenge' collection-time 1776 collection-count 300 avg-time 5 |gctime=5;50;100+
 
-===== Check Major GC Time =====
+==== Check Major GC Time ====
 
 The option +gctime+ allows you to monitor the average major garbage collection time in milliseconds.
 
@@ -44,5 +45,5 @@ The option +gctime+ allows you to monitor the average major garbage collection t
 
 Sample output:
 
-+OK - GC 'PS_MarkSweep' collection-time 468 collection-count 2 avg-time 234 |gctime=234;500;1000 +
++OK - GC 'PS_MarkSweep' collection-time 468 collection-count 2 avg-time 234 |gctime=234;500;1000+
 
