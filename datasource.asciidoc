@@ -18,6 +18,8 @@ Then you can reference it like the following.
 
 ===== Check Non-XA Datasource Active Connection Count =====
 
+Provides active connections used by applications or available in the pool.
+
  define service {
     use                     generic-service
     hostgroup_name          JBossAS Servers
