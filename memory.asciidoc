@@ -1,5 +1,7 @@
 == Memory Usage ==
 
+This section provides example configuration for checking JVM memory utilization.
+
 === Installation: ===
 
 Edit your commands.cfg and add the following
@@ -51,9 +53,67 @@ Sample output:
 
 ===== Check Eden Space Utilization =====
 
+The option +eden_space_usage+ allows you to monitor the Eden space memory utilization of the JVM. Default thresholds are +WARNING+ - 80 inclusive and +CRITICAL+ - 90 inclusive.
+In the example below 80 is the +WARNING+ threshold while 95 is the +CRITICAL+ threshold.
+These thresholds are compared to the perecentage of +used+ eden space against +max+ available eden space.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Eden Space Usage Check
+    check_command           check_jboss_memory!eden_space_usage!9990!admin!password123!80!95
+ }
+
+Sample output:
+
++OK - PS_Eden_Space Memory Utilization 4 of 164 MiB |eden_space_usage=2.44;80;95+
+
+
 ===== Check Old Gen Utilization =====
+
+The option +old_gen_usage+ allows you to monitor the old gen memory utilization of the JVM. Default thresholds are +WARNING+ - 80 inclusive and +CRITICAL+ - 90 inclusive.
+In the example below 80 is the +WARNING+ threshold while 95 is the +CRITICAL+ threshold.
+These thresholds are compared to the perecentage of +used+ old gen space against +max+ available.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Old Gen Usage Check
+    check_command           check_jboss_memory!old_gen_usage!9990!admin!password123!80!95
+ }
+
+Sample output:
+
++OK - PS_Old_Gen Memory Utilization 35 of 341 MiB |old_gen_usage=10.26;80;95+
 
 ===== Check Perm Gen Utilization =====
 
+The option +perm_gen_usage+ allows you to monitor the perm gen memory utilization of the JVM. Default thresholds are +WARNING+ - 90 inclusive and +CRITICAL+ - 95 inclusive.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Perm Gen Usage Check
+    check_command           check_jboss_memory!perm_gen_usage!9990!admin!password123!90!95
+ }
+
+Sample output:
+
++OK - PS_Perm_Gen Memory Utilization 68 of 256 MiB |perm_gen_usage=26.56;90;95+
+
 ===== Check Code Cache Utilization =====
+
+The option +code_cache_usage+ allows you to monitor the code cache utilization of the JVM. Default thresholds are +WARNING+ - 90 inclusive and +CRITICAL+ - 95 inclusive.
+
+ define service {
+    use                     generic-service
+    hostgroup_name          JBossAS Servers
+    service_description     JBossAS Server Code Cache Usage Check
+    check_command           check_jboss_memory!code_cache_usage!9990!admin!password123!90!95
+ }
+
+Sample output:
+
++OK - Code_Cache Memory Utilization 18 of 96 MiB |code_cache_usage=18.75;90;95+
+
 
