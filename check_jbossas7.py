@@ -496,13 +496,13 @@ def check_queue_depth(host, port, user, passwd, queue_name, warning, critical, p
         payload = {'include-runtime': 'true', 'recursive':'true'}
         url = "/subsystem/messaging/hornetq-server/default/jms-queue/" + queue_name
         
-        res = get_digest_auth_json(host, port, url, user, passwd, payload)
-        res = res['delivering-count']
+        data = get_digest_auth_json(host, port, url, user, passwd, payload)
+        queue_depth = data['message-count']
         
-        message = "Queue Depth %s" % res
-        message += performance_data(perf_data, [(res, "queue_depth", warning, critical)])
+        message = "Queue %s depth %s" % (queue_name, queue_depth)
+        message += performance_data(perf_data, [(queue_depth, "queue_depth", warning, critical)])
     
-        return check_levels(res, warning, critical, message)
+        return check_levels(queue_depth, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
