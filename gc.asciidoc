@@ -39,7 +39,7 @@ The option +gctime+ allows you to monitor the average major garbage collection t
  define service {
     use                     generic-service
     hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Percent GC time Check
+    service_description     JBossAS Server Avg. Major GC time Check
     check_command           check_jboss_gc!gctime!9990!admin!password123!PS_MarkSweep!500!1000
  }
 
