@@ -212,7 +212,7 @@ def main(argv):
                           'old_gen_usage', 'perm_gen_usage', 'code_cache_usage', 'gctime',
                           'queue_depth', 'datasource', 'xa_datasource', 'threading'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
-    p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The GC type to check [PS_MarkSweep|PS_Scavenge] from gctime_percent')
+    p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The memory pool type to check for gctime')
     p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
     p.add_option('-d', '--datasource', action='store', dest='datasource_name', default=None, help='The datasource name for which you want to retrieve statistics')
     p.add_option('-s', '--poolstats', action='store', dest='ds_stat_type', default=None, help='The datasource pool statistics type')
@@ -453,7 +453,10 @@ def check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data
         gc_time = res['name'][gc_type]['collection-time']
         gc_count = res['name'][gc_type]['collection-count']
         
-        avg_gc_time = gc_time / gc_count
+        avg_gc_time = 0
+         
+        if gc_count > 0:
+            avg_gc_time = gc_time / gc_count
         
         message = "GC '%s' collection-time %s collection-count %s avg-time %s" % (gc_type, gc_time, gc_count, avg_gc_time)
         message += performance_data(perf_data, [(avg_gc_time, "gctime", warning, critical)])
