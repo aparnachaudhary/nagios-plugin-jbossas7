@@ -38,8 +38,7 @@ Options:
                         The action you want to take
   -D, --perf-data       Enable output of Nagios performance data
   -g GC_TYPE, --gctype=GC_TYPE
-                        The GC type to check [PS_MarkSweep|PS_Scavenge] from
-                        gctime_percent
+                        The memory pool type to check for gctime
   -q QUEUE_NAME, --queuename=QUEUE_NAME
                         The queue name for which you want to retrieve queue
                         depth
