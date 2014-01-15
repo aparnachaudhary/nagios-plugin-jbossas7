@@ -2,6 +2,8 @@
 
 This project provides a Nagios plugin for JBossAS 7.1.1 resource monitoring. The plugin uses HTTP-JSON based API (JBossAS REST Management API) to collect server statistics. The plugin currently supports JBoss standalone mode.
 
+image::NagiosJBossAS7.jpg[]
+
 Other plugins need additional +SAR+ or +WAR+ to be installed on the application server. Typically in Enterprise setups; it is sometimes not allowed to perform any additional installations on the target system.
 The main advantage of this plugin is it leverages the +REST+ API of JBossAS. This allows us to monitor the application server without any additional configurations and installations.
 
