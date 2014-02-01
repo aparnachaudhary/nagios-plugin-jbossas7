@@ -8,7 +8,7 @@ Edit your commands.cfg and add the following
 
  define command {
     command_name    check_jboss_memory
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -W $ARG5$ -C $ARG6$
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -W $ARG5$ -C $ARG6$ -m $ARG7$
  }
 
 (add -D to the command if you want to add perfdata to the output)
@@ -31,8 +31,7 @@ These thresholds are compared to the perecentage of +used+ heap against +max+ av
  }
 
 Sample output:
-
-+OK - Heap Memory Utilization 39 of 455 MiB |heap_usage=8.57;80;90+ 
++OK - Heap Memory Utilization 154MB of 455MB |heap_usage=33.85%;80;90+
 
 ===== Check Non Heap Utilization =====
 
@@ -48,8 +47,7 @@ These thresholds are compared to the perecentage of +used+ non heap space agains
  }
 
 Sample output:
-
-+OK - Non Heap Memory Utilization 78 of 352 MiB |non_heap_usage=22.16;80;90+
++OK - Non Heap Memory Utilization 80MB of 352MB |non_heap_usage=22.73%;80;90+ 
 
 ===== Check Eden Space Utilization =====
 
@@ -61,12 +59,13 @@ These thresholds are compared to the perecentage of +used+ eden space against +m
     use                     generic-service
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Eden Space Usage Check
-    check_command           check_jboss_memory!eden_space_usage!9990!admin!password123!80!95
+    check_command           check_jboss_memory!eden_space_usage!9990!admin!password123!80!95!memory_pool
  }
 
-Sample output:
+Examples of memory_pool types: +PS_Eden_Space+, +G1_Eden_Space+
 
-+OK - PS_Eden_Space Memory Utilization 4 of 164 MiB |eden_space_usage=2.44;80;95+
+Sample output:
++OK - Eden_Space Utilization 43MB of 56MB |eden_space_usage=76.79%;80;95+
 
 
 ===== Check Old Gen Utilization =====
@@ -79,12 +78,13 @@ These thresholds are compared to the perecentage of +used+ old gen space against
     use                     generic-service
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Old Gen Usage Check
-    check_command           check_jboss_memory!old_gen_usage!9990!admin!password123!80!95
+    check_command           check_jboss_memory!old_gen_usage!9990!admin!password123!80!95!memory_pool
  }
 
-Sample output:
+Examples of memory_pool types: +PS_Old_Gen+, +G1_Old_Gen+
 
-+OK - PS_Old_Gen Memory Utilization 35 of 341 MiB |old_gen_usage=10.26;80;95+
+Sample output:
++OK - Old_Gen Utilization 134MB of 341MB |old_gen_usage=39.30%;80;95+
 
 ===== Check Perm Gen Utilization =====
 
@@ -94,12 +94,13 @@ The option +perm_gen_usage+ allows you to monitor the perm gen memory utilizatio
     use                     generic-service
     hostgroup_name          JBossAS Servers
     service_description     JBossAS Server Perm Gen Usage Check
-    check_command           check_jboss_memory!perm_gen_usage!9990!admin!password123!90!95
+    check_command           check_jboss_memory!perm_gen_usage!9990!admin!password123!90!95!memory_pool
  }
 
-Sample output:
+Examples of memory_pool types: +PS_Perm_Gen+, +G1_Perm_Gen+
 
-+OK - PS_Perm_Gen Memory Utilization 68 of 256 MiB |perm_gen_usage=26.56;90;95+
+Sample output:
++OK - Perm_Gen Utilization 66MB of 256MB |perm_gen_usage=25.78%;90;95+
 
 ===== Check Code Cache Utilization =====
 
@@ -113,7 +114,6 @@ The option +code_cache_usage+ allows you to monitor the code cache utilization o
  }
 
 Sample output:
-
-+OK - Code_Cache Memory Utilization 18 of 96 MiB |code_cache_usage=18.75;90;95+
++OK - Code_Cache Utilization 14MB of 96MB |code_cache_usage=14.58%;90;95+
 
 

@@ -8,7 +8,7 @@ Edit your commands.cfg and add the following
 
  define command {
     command_name    check_jboss_gc
-    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -g $ARG5$ -W $ARG6$ -C $ARG7$
+    command_line    $USER1$/nagios-plugin-jbossas7/check_jbossas7.py -H $HOSTADDRESS$ -A $ARG1$ -P $ARG2$ -u $ARG3$ -p $ARG4$ -m $ARG5$ -W $ARG6$ -C $ARG7$
  }
 
 (add -D to the command if you want to add perfdata to the output)
@@ -23,14 +23,15 @@ The option +gctime+ allows you to monitor the average minor garbage collection t
  define service {
     use                     generic-service
     hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Avg. Minor GC time Check
-    check_command           check_jboss_gc!gctime!9990!admin!password123!PS_Scavenge!50!100
+    service_description     JBossAS Avg. Minor GC time Check
+    check_command           check_jboss_gc!gctime!9990!admin!password123!memory_pool!50!100
  }
-
+ 
+Examples of memory_pool types: +PS_Scavenge+, +G1_Young_Generation+
 
 Sample output:
 
-+OK - GC 'PS_Scavenge' collection-time 1776 collection-count 300 avg-time 5 |gctime=5;50;100+
++OK - GC 'PS_Scavenge' total-time=413ms count=9 avg-time=45.00ms |gctime=45.00ms;500;1000+
 
 ==== Check Major GC Time ====
 
@@ -39,11 +40,13 @@ The option +gctime+ allows you to monitor the average major garbage collection t
  define service {
     use                     generic-service
     hostgroup_name          JBossAS Servers
-    service_description     JBossAS Server Avg. Major GC time Check
-    check_command           check_jboss_gc!gctime!9990!admin!password123!PS_MarkSweep!500!1000
+    service_description     JBossAS Avg. Major GC time Check
+    check_command           check_jboss_gc!gctime!9990!admin!password123!memory_pool!500!1000
  }
+
+Examples of memory_pool types: +PS_MarkSweep+, +G1_Old_Generation+
 
 Sample output:
 
-+OK - GC 'PS_MarkSweep' collection-time 468 collection-count 2 avg-time 234 |gctime=234;500;1000+
++OK - GC 'PS_MarkSweep' total-time=468ms count=2 avg-time=234.00ms |gctime=234.00ms;500;1000+
 

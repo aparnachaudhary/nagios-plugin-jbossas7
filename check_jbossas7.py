@@ -8,6 +8,7 @@
 #
 # Main Author
 #   - Aparna Chaudhary <aparna.chaudhary@gmail.com>
+# Version: 0.2
 #
 # USAGE
 #
@@ -21,7 +22,6 @@ import re
 import os
 import requests
 from requests.auth import HTTPDigestAuth
-# from datetime import timedelta
 
 try:
     import json
@@ -212,7 +212,7 @@ def main(argv):
                           'old_gen_usage', 'perm_gen_usage', 'code_cache_usage', 'gctime',
                           'queue_depth', 'datasource', 'xa_datasource', 'threading'])
     p.add_option('-D', '--perf-data', action='store_true', dest='perf_data', default=False, help='Enable output of Nagios performance data')
-    p.add_option('-g', '--gctype', action='store', dest='gc_type', default='PS_MarkSweep', help='The memory pool type to check for gctime')
+    p.add_option('-m', '--memorypool', action='store', dest='memory_pool', default=None, help='The memory pool type')
     p.add_option('-q', '--queuename', action='store', dest='queue_name', default=None, help='The queue name for which you want to retrieve queue depth')
     p.add_option('-d', '--datasource', action='store', dest='datasource_name', default=None, help='The datasource name for which you want to retrieve statistics')
     p.add_option('-s', '--poolstats', action='store', dest='ds_stat_type', default=None, help='The datasource pool statistics type')
@@ -223,7 +223,7 @@ def main(argv):
     port = options.port
     user = options.user
     passwd = options.passwd
-    gc_type = options.gc_type
+    memory_pool = options.memory_pool
     queue_name = options.queue_name
     datasource_name = options.datasource_name
     ds_stat_type = options.ds_stat_type
@@ -242,7 +242,7 @@ def main(argv):
     if action == "server_status":
         return check_server_status(host, port, user, passwd, warning, critical, perf_data)
     elif action == "gctime":
-        return check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data)
+        return check_gctime(host, port, user, passwd, memory_pool, warning, critical, perf_data)
     elif action == "queue_depth":
         return check_queue_depth(host, port, user, passwd, queue_name, warning, critical, perf_data)
     elif action == "heap_usage":
@@ -250,13 +250,13 @@ def main(argv):
     elif action == "non_heap_usage":
         return check_non_heap_usage(host, port, user, passwd, warning, critical, perf_data)
     elif action == "eden_space_usage":
-        return check_eden_space_usage(host, port, user, passwd, warning, critical, perf_data)
+        return check_eden_space_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data)
     elif action == "old_gen_usage":
-        return check_old_gen_usage(host, port, user, passwd, warning, critical, perf_data)
+        return check_old_gen_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data)
     elif action == "perm_gen_usage":
-        return check_perm_gen_usage(host, port, user, passwd, warning, critical, perf_data)
+        return check_perm_gen_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data)
     elif action == "code_cache_usage":
-        return check_code_cache_usage(host, port, user, passwd, warning, critical, perf_data)
+        return check_code_cache_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data)
     elif action == "datasource":
         return check_non_xa_datasource(host, port, user, passwd, datasource_name, ds_stat_type, warning, critical, perf_data)
     elif action == "xa_datasource":
@@ -336,8 +336,8 @@ def check_heap_usage(host, port, user, passwd, warning, critical, perf_data):
         max_heap = get_memory_usage(host, port, user, passwd, True, 'max')
         percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "Heap Memory Utilization %s of %s MiB" % (used_heap, max_heap)
-        message += performance_data(perf_data, [(percent, "heap_usage", warning, critical)])
+        message = "Heap Memory Utilization %sMB of %sMB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [("%.2f%%" % percent, "heap_usage", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
     except Exception, e:
@@ -352,8 +352,8 @@ def check_non_heap_usage(host, port, user, passwd, warning, critical, perf_data)
         max_heap = get_memory_usage(host, port, user, passwd, False, 'max')
         percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "Non Heap Memory Utilization %s of %s MiB" % (used_heap, max_heap)
-        message += performance_data(perf_data, [(percent, "non_heap_usage", warning, critical)])
+        message = "Non Heap Memory Utilization %sMB of %sMB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [("%.2f%%" % percent, "non_heap_usage", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
     except Exception, e:
@@ -372,94 +372,94 @@ def get_memory_pool_usage(host, port, user, passwd, pool_name, memory_value):
         return exit_with_general_critical(e)
 
 
-def check_eden_space_usage(host, port, user, passwd, warning, critical, perf_data):
+def check_eden_space_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data):
     warning = warning or 80
     critical = critical or 90
     
     try:
-        used_heap = get_memory_pool_usage(host, port, user, passwd, 'PS_Eden_Space', 'used')
-        max_heap = get_memory_pool_usage(host, port, user, passwd, 'PS_Eden_Space', 'max')
+        used_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'used')
+        max_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'max')
         percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "PS_Eden_Space Utilization %s of %s MiB" % (used_heap, max_heap)
-        message += performance_data(perf_data, [(percent, "eden_space_usage", warning, critical)])
+        message = "Eden_Space Utilization %sMB of %sMB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [("%.2f%%" % percent, "eden_space_usage", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
-def check_old_gen_usage(host, port, user, passwd, warning, critical, perf_data):
+def check_old_gen_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data):
     warning = warning or 80
     critical = critical or 90
     
     try:
-        used_heap = get_memory_pool_usage(host, port, user, passwd, 'PS_Old_Gen', 'used')
-        max_heap = get_memory_pool_usage(host, port, user, passwd, 'PS_Old_Gen', 'max')
+        used_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'used')
+        max_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'max')
         percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "PS_Old_Gen Utilization %s of %s MiB" % (used_heap, max_heap)
-        message += performance_data(perf_data, [(percent, "old_gen_usage", warning, critical)])
+        message = "Old_Gen Utilization %sMB of %sMB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [("%.2f%%" % percent, "old_gen_usage", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
 
-def check_perm_gen_usage(host, port, user, passwd, warning, critical, perf_data):
+def check_perm_gen_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data):
     warning = warning or 90
     critical = critical or 95
     
     try:
-        used_heap = get_memory_pool_usage(host, port, user, passwd, 'PS_Perm_Gen', 'used')
-        max_heap = get_memory_pool_usage(host, port, user, passwd, 'PS_Perm_Gen', 'max')
+        used_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'used')
+        max_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'max')
         percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "PS_Perm_Gen Utilization %s of %s MiB" % (used_heap, max_heap)
-        message += performance_data(perf_data, [(percent, "perm_gen_usage", warning, critical)])
+        message = "Perm_Gen Utilization %sMB of %sMB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [("%.2f%%" % percent, "perm_gen_usage", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
-def check_code_cache_usage(host, port, user, passwd, warning, critical, perf_data):
+def check_code_cache_usage(host, port, user, passwd, memory_pool, warning, critical, perf_data):
     warning = warning or 90
     critical = critical or 95
     
     try:
-        used_heap = get_memory_pool_usage(host, port, user, passwd, 'Code_Cache', 'used')
-        max_heap = get_memory_pool_usage(host, port, user, passwd, 'Code_Cache', 'max')
+    	if memory_pool == None:
+    		memory_pool = 'Code_Cache'
+    		
+        used_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'used')
+        max_heap = get_memory_pool_usage(host, port, user, passwd, memory_pool, 'max')
         percent = round((float(used_heap * 100) / max_heap), 2)
         
-        message = "Code_Cache Utilization %s of %s MiB" % (used_heap, max_heap)
-        message += performance_data(perf_data, [(percent, "code_cache_usage", warning, critical)])
+        message = "Code_Cache Utilization %sMB of %sMB" % (used_heap, max_heap)
+        message += performance_data(perf_data, [("%.2f%%" % percent, "code_cache_usage", warning, critical)])
     
         return check_levels(percent, warning, critical, message)
     except Exception, e:
         return exit_with_general_critical(e)
 
 
-def check_gctime(host, port, user, passwd, gc_type, warning, critical, perf_data):
+def check_gctime(host, port, user, passwd, memory_pool, warning, critical, perf_data):
     # Make sure you configure right values for your application    
     warning = warning or 500
     critical = critical or 1000
     
     try:
-        if gc_type not in ['PS_MarkSweep', 'PS_Scavenge']:
-            return exit_with_general_critical("The GC type of '%s' is not valid" % gc_type)
-            
         payload = {'include-runtime': 'true', 'recursive':'true'}
         url = "/core-service/platform-mbean/type/garbage-collector"
         res = get_digest_auth_json(host, port, url, user, passwd, payload)
-        gc_time = res['name'][gc_type]['collection-time']
-        gc_count = res['name'][gc_type]['collection-count']
+        gc_time = res['name'][memory_pool]['collection-time']
+        gc_count = res['name'][memory_pool]['collection-count']
         
         avg_gc_time = 0
          
         if gc_count > 0:
-            avg_gc_time = gc_time / gc_count
+            avg_gc_time = float(gc_time / gc_count)
         
-        message = "GC '%s' collection-time %s collection-count %s avg-time %s" % (gc_type, gc_time, gc_count, avg_gc_time)
-        message += performance_data(perf_data, [(avg_gc_time, "gctime", warning, critical)])
+        message = "GC '%s' total-time=%dms count=%s avg-time=%.2fms" % (memory_pool, gc_time, gc_count, avg_gc_time)
+        message += performance_data(perf_data, [("%.2fms" % avg_gc_time, "gctime", warning, critical)])
     
         return check_levels(avg_gc_time, warning, critical, message)
     except Exception, e:

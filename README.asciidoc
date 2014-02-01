@@ -37,8 +37,8 @@ Options:
   -A ACTION, --action=ACTION
                         The action you want to take
   -D, --perf-data       Enable output of Nagios performance data
-  -g GC_TYPE, --gctype=GC_TYPE
-                        The memory pool type to check for gctime
+  -m MEMORY_POOL, --memorypool=MEMORY_POOL
+                        The memory pool type
   -q QUEUE_NAME, --queuename=QUEUE_NAME
                         The queue name for which you want to retrieve queue
                         depth
